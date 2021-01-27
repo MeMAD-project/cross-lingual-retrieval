@@ -1,23 +1,28 @@
 #!/usr/bin/env python3
 
-from os import path
 from bs4 import BeautifulSoup
+from os import path
+from paths import Paths
 
 import json, zipfile
 
+paths = Paths()
+
 topic_ids = [str(topic_id) for topic_id in range(71, 121)]
 
-dataset_dir = path.join('/scratch', 'project_2000945', 'retrieval-data', 'wiki-retrieval-2010')
+dataset_dir = paths.get('WIKIDATA-DIR')
 
 qrels_path = path.join(dataset_dir, 'wikipedia_topics_2011', 'wikipedia_2011.qrels')
 cime_features_path = path.join(dataset_dir, 'features', 'cime.txt')
 image_metadata_path = path.join(dataset_dir, 'all_text', 'metadata.zip')
 topic_metadata_path = path.join(dataset_dir, 'wikipedia_topics_2011', 'wikipedia_topics_2011_v3.xml')
 
-output_path = path.join(dataset_dir, 'memad', 'setting-original.json')
+data_dir = paths.get('DATA-DIR')
+
+output_path = path.join(data_dir, 'setting-original.json')
 output = {}
 
-print('Caching qrels...')
+print('Caching topic relevances...')
 
 relevances = {}
 

@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 
+from os import path
 import re
 
 class Paths:
   def __init__(self):
     self.config = {}
-    with open('paths.conf', mode='r', encoding='utf-8') as config_file:
+    with open(path.join('..', 'paths.conf'), mode='r', encoding='utf-8') as config_file:
       for line in config_file:
         line = line[:line.find('#')].strip()
         

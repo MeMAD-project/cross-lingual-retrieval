@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 
 from os import path
+from paths import Paths
 
 import html, json
 
-dataset_dir = path.join('/scratch', 'project_2000945', 'retrieval-data', 'wiki-retrieval-2010')
+paths = Paths()
+
+data_dir = paths.get('DATA-DIR')
 
 json_paths = [
-  path.join(dataset_dir, 'memad', 'setting-original.json'),
-  path.join(dataset_dir, 'memad', 'setting-masked.json')
+  path.join(data_dir, 'setting-original.json'),
+  path.join(data_dir, 'setting-masked.json')
 ]
 
 for json_path in json_paths:

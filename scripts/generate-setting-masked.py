@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 
 from os import path
+from paths import Paths
 
 import json
 
-dataset_dir = path.join('/scratch', 'project_2000945', 'retrieval-data', 'wiki-retrieval-2010')
+paths = Paths()
 
-input_path = path.join(dataset_dir, 'memad', 'setting-original.json')
-output_path = path.join(dataset_dir, 'memad', 'setting-masked.json')
+data_dir = paths.get('DATA-DIR')
+
+input_path = path.join(data_dir, 'setting-original.json')
+output_path = path.join(data_dir, 'setting-masked.json')
 
 setting = {}
 
