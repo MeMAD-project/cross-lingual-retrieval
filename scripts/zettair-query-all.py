@@ -1,18 +1,42 @@
 #!/usr/bin/env python3
 
+from bs4 import BeautifulSoup
+from os import path
+from paths import Paths
+
 import json, os, re
 
-topics = {}
+paths = Paths()
 
-with open('topics.tsv', mode='r', encoding='utf-8') as topics_file:
-  for topic_row in topics_file:
-    topic_id, topic_desc_en, topic_desc_de, topic_desc_fr = topic_row.split('\t')
-    topics[int(topic_id)] = {'en': topic_desc_en.strip(), 'de': topic_desc_de.strip(), 'fr': topic_desc_fr.strip()}
+dataset_dir = paths.get('WIKIDATA-DIR')
+
+topic_metadata_path = path.join(dataset_dir, 'wikipedia_topics_2011', 'wikipedia_topics_2011_v3.xml')
+
+topic_descriptions = {}
+
+with open(topic_metadata_path, mode='r', encoding='iso-8859-1') as topic_metadata_file:
+  topic_metadata = BeautifulSoup(topic_metadata_file, features='lxml-xml')
+
+  for topic in topic_metadata.find_all('topic'):
+    topic_id = int(topic.number.string.strip())
+
+    try:
+      topic_descriptions[topic_id] = {'de': None, 'en': None, 'fr': None}
+
+      for title in topic.find_all('title'):
+        topic_descriptions[topic_id][title['xml:lang']] = title.string.strip()
+
+    except:
+      print('Metadata parse error for topic #%d!' % topic_id)
+
+data_dir = paths.get('DATA-DIR')
+
+setting_original_path = path.join(data_dir, 'setting-original.json')
 
 doc_topics = {}
 relevant_docs = {}
 
-with open('setting-original.json', mode='r', encoding='utf-8') as setting_original_file:
+with open(setting_original_path, mode='r', encoding='utf-8') as setting_original_file:
   setting_original = json.load(setting_original_file)
   
   for doc_id in setting_original:
@@ -24,11 +48,13 @@ with open('setting-original.json', mode='r', encoding='utf-8') as setting_origin
       
       relevant_docs[topic_id].append(doc_id)
 
+models_dir = paths.get('MODELS-DIR')
+
 for query_lang in ['en', 'de', 'fr']:
-  for topic_id in topics:
-    topic_desc = topics[topic_id][query_lang]
+  for topic_id in topic_descriptions:
+    topic_desc = topic_descriptions[topic_id][query_lang]
     
-    os.system('./zettair-query.sh setting-masked.zettair-index 50 "%s" > zettair-query-output.tmp' % topic_desc)
+    os.system('./zettair-query.sh %s 50 "%s" > zettair-query-output.tmp' % (path.join(models_dir, 'setting-masked.zettair-index'), topic_desc))
     
     query_results = []
     
