@@ -48,23 +48,48 @@ with open(setting_original_path, mode='r', encoding='utf-8') as setting_original
       
       relevant_docs[topic_id].append(doc_id)
 
+visuals_dir = paths.get('VISUALS-DIR')
+best_visual_path = path.join(visuals_dir, 'best-visual-1000.csv')
+
+vis = {}
+with open(best_visual_path) as visual:
+  for l in visual:
+    m = re.match('query-(.*),0+(.*),(.*)', l)
+    assert m
+    q = m.group(1)
+    i = m.group(2)
+    v = m.group(3)
+    #print(q, i, v)
+    q = int(q)
+    if not q in vis:
+      vis[q] = []
+    vis[q].append(i)
+
 models_dir = paths.get('MODELS-DIR')
 
-for query_lang in ['en', 'de', 'fr']:
+avg_res = []
+
+for query_lang in ['en', 'de', 'fr', 'vi']:
+  avg = [0] * 8
+
   for topic_id in topic_descriptions:
-    topic_desc = topic_descriptions[topic_id][query_lang]
-    
-    os.system('./zettair-query.py --index-prefix %s --n-best 50 --query "%s" > zettair-query-output.tmp' % (path.join(models_dir, 'setting-masked.zettair-index'), topic_desc))
-    
-    query_results = []
-    
-    with open('zettair-query-output.tmp', mode='r', encoding='utf-8') as query_output:
-      for line in query_output:
-        regex_search = re.search('^[0-9]+\. ([0-9]+)', line)
-        if regex_search:
-          query_results.append(regex_search.group(1))
-    
-    os.system('rm -f zettair-query-output.tmp')
+    if query_lang=='vi':
+      query_results = vis[topic_id][:50]
+
+    else:
+      topic_desc = topic_descriptions[topic_id][query_lang]
+
+      os.system('./zettair-query.py --index-prefix %s --n-best 50 --query "%s" > zettair-query-output.tmp' % (path.join(models_dir, 'setting-masked.zettair-index'), topic_desc))
+
+      query_results = []
+
+      with open('zettair-query-output.tmp', mode='r', encoding='utf-8') as query_output:
+        for line in query_output:
+          regex_search = re.search('^[0-9]+\. ([0-9]+)', line)
+          if regex_search:
+            query_results.append(regex_search.group(1))
+
+      os.system('rm -f zettair-query-output.tmp')
     
     query_matches = [topic_id in doc_topics[doc_id] for doc_id in query_results]
     
@@ -82,3 +107,21 @@ for query_lang in ['en', 'de', 'fr']:
     
 #    print('%d (%s)\n\tp@5: %.1f | p@10: %.1f | p@20: %.1f | p@50: %.1f\n\tr@5: %.1f | r@10: %.1f | r@20: %.1f | r@50: %.1f' % (topic_id, query_lang, precision_at[5], precision_at[10], precision_at[20], precision_at[50], recall_at[5], recall_at[10], recall_at[20], recall_at[50]))
     print('%d\t(%s)\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f' % (topic_id, query_lang, precision_at[5], precision_at[10], precision_at[20], precision_at[50], recall_at[5], recall_at[10], recall_at[20], recall_at[50]))
+
+    avg[0] +=  precision_at[5]
+    avg[1] +=  precision_at[10]
+    avg[2] +=  precision_at[20]
+    avg[3] +=  precision_at[50]
+    avg[4] +=  recall_at[5]
+    avg[5] +=  recall_at[10]
+    avg[6] +=  recall_at[20]
+    avg[7] +=  recall_at[50]
+
+  for i in range(8):
+    avg[i] /= 50
+  avg_res.append((query_lang, avg))
+
+for query_lang, avg in avg_res:
+  print('%s\t(%s)\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f' %
+        ('avg', query_lang, avg[0], avg[1], avg[2], avg[3],
+         avg[4], avg[5], avg[6], avg[7]))
