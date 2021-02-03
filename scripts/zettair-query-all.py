@@ -54,7 +54,7 @@ for query_lang in ['en', 'de', 'fr']:
   for topic_id in topic_descriptions:
     topic_desc = topic_descriptions[topic_id][query_lang]
     
-    os.system('./zettair-query.sh %s 50 "%s" > zettair-query-output.tmp' % (path.join(models_dir, 'setting-masked.zettair-index'), topic_desc))
+    os.system('./zettair-query.py --index-prefix %s --n-best 50 --query "%s" > zettair-query-output.tmp' % (path.join(models_dir, 'setting-masked.zettair-index'), topic_desc))
     
     query_results = []
     
