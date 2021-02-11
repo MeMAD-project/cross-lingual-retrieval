@@ -8,6 +8,8 @@ from copy import copy
 import json, os, re
 import numpy as np
 
+n_zet_results = 100
+
 paths = Paths()
 
 dataset_dir = paths.get('WIKIDATA-DIR')
@@ -123,6 +125,7 @@ for i in range(len(langs)):
     for k in range(j+1, len(langs)):
       langs_test.append(langs[i]+'+'+langs[j]+'+'+langs[k])
 langs_test.append('en+de+fr+vi')
+# langs_test = ['en', 'vi']
       
 for query_lang in langs_test:
   avg = [0] * 8
@@ -135,7 +138,7 @@ for query_lang in langs_test:
         qr = vis[topic_id]
       else:
         topic_desc = topic_descriptions[topic_id][l]
-        qr = one_zet_result(topic_desc, 50)
+        qr = one_zet_result(topic_desc, n_zet_results)
       qres.append((l, qr))
 
     if len(qres)==1:
@@ -146,6 +149,7 @@ for query_lang in langs_test:
     #print(topic_id, query_lang, len(query_results))
     
     query_matches = [topic_id in doc_topics[doc_id] for doc_id in query_results]
+    # print(len(query_matches), query_matches)
     
     precision_at = {}
     recall_at = {}
