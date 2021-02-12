@@ -22,9 +22,10 @@ data_dir = paths.get('DATA-DIR')
 output_path = path.join(data_dir, 'setting-original.json')
 output = {}
 
-print('Caching topic relevances...')
+print('Collating topic relevances...')
 
 relevances = {}
+nonrelevances = {}
 
 with open(qrels_path, mode='r', encoding='utf-8') as qrels_file:
   for qrels_line in qrels_file:
@@ -34,20 +35,21 @@ with open(qrels_path, mode='r', encoding='utf-8') as qrels_file:
     image_id = int(image_id)
     
     if image_id not in relevances:
-        relevances[image_id] = []
+      relevances[image_id] = []
+      nonrelevances[image_id] = []
     
     if relevance == '1':
       relevances[image_id].append(topic_id)
-
-print('...done!')
-
-print('Collating topic relevances...')
-
-with open(cime_features_path, mode='r', encoding='utf-8') as visual_features_file:
-  for visual_features_line in visual_features_file:
-    image_id = int(visual_features_line.split()[0])
     
-    output[image_id] = {'relevant-topics': relevances[image_id] if image_id in relevances else []}
+    elif relevance == '0':
+      nonrelevances[image_id].append(topic_id)
+    
+    if image_id not in output:
+      output[image_id] = {}
+
+for image_id in output:
+  output[image_id]['relevant-topics'] = relevances[image_id] if image_id in relevances else []
+  output[image_id]['non-relevant-topics'] = nonrelevances[image_id] if image_id in nonrelevances else []
 
 print('...done!')
 
@@ -93,7 +95,7 @@ with zipfile.ZipFile(image_metadata_path, mode='r') as image_metadata_archive:
   ct = 0
   for filename in image_metadata_archive.namelist():
     ct += 1
-    if ct % 1000 == 0:
+    if ct % 10000 == 0:
       print('%dk-' % int(ct / 1000))
     if path.splitext(filename)[-1] == '.xml':
       image_id = int(path.splitext(path.basename(filename))[0])
