@@ -20,12 +20,16 @@ topic_metadata_path = path.join(dataset_dir, 'wikipedia_topics_2011', 'wikipedia
 data_dir = paths.get('DATA-DIR')
 
 output_path = path.join(data_dir, 'setting-original.json')
+output_only_qrels_path = path.join(data_dir, 'setting-original-only-qrels.json')
+
 output = {}
 
-print('Collating topic relevances...')
+print('Caching topic relevances...')
 
 relevances = {}
 nonrelevances = {}
+
+qrels_image_ids = set()
 
 with open(qrels_path, mode='r', encoding='utf-8') as qrels_file:
   for qrels_line in qrels_file:
@@ -44,12 +48,18 @@ with open(qrels_path, mode='r', encoding='utf-8') as qrels_file:
     elif relevance == '0':
       nonrelevances[image_id].append(topic_id)
     
-    if image_id not in output:
-      output[image_id] = {}
+    qrels_image_ids.add(image_id)
 
-for image_id in output:
-  output[image_id]['relevant-topics'] = relevances[image_id] if image_id in relevances else []
-  output[image_id]['non-relevant-topics'] = nonrelevances[image_id] if image_id in nonrelevances else []
+print('Collating topic relevances...')
+
+with open(cime_features_path, mode='r', encoding='utf-8') as visual_features_file:
+  for visual_features_line in visual_features_file:
+    image_id = int(visual_features_line.split()[0])
+    
+    output[image_id] = {
+      'relevant-topics' : relevances[image_id] if image_id in relevances else [],
+      'non-relevant-topics' : nonrelevances[image_id] if image_id in nonrelevances else []
+    }
 
 print('...done!')
 
@@ -122,9 +132,14 @@ with zipfile.ZipFile(image_metadata_path, mode='r') as image_metadata_archive:
 
 print('...done!')
 
-print('Generating output file...')
+print('Generating output files...')
 
 with open(output_path, mode='w', encoding='utf-8') as output_file:
   json.dump(output, output_file, indent='\t', sort_keys=True, ensure_ascii=False)
+
+output_only_qrels = {iid: output[iid] for iid in output if iid in qrels_image_ids}
+
+with open(output_only_qrels_path, mode='w', encoding='utf-8') as output_only_qrels_file:
+  json.dump(output_only_qrels, output_only_qrels_file, indent='\t', sort_keys=True, ensure_ascii=False)
 
 print('...done!')

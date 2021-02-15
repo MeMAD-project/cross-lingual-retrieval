@@ -11,7 +11,9 @@ data_dir = paths.get('DATA-DIR')
 
 json_paths = [
   path.join(data_dir, 'setting-original.json'),
-  path.join(data_dir, 'setting-masked.json')
+  path.join(data_dir, 'setting-original-only-qrels.json'),
+  path.join(data_dir, 'setting-masked.json'),
+  path.join(data_dir, 'setting-masked-only-qrels.json')
 ]
 
 for json_path in json_paths:
