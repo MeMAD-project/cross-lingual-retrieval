@@ -29,6 +29,8 @@ parser.add_argument('--results', type=int, default=50,
 parser.add_argument('--negatives', type=str, default='implicit',
                     choices=['implicit', 'explicit'],
                     help='either "implicit" or "explicit", default=%(default)s')
+parser.add_argument('--verbose', action='store_true',
+                    help='show also topic-wise results')
 args = parser.parse_args()
 
 langs_test = args.languages.split(',')
@@ -97,7 +99,6 @@ with open(best_visual_path) as visual:
       vis[q] = []
     vis[q].append(i)
 
-
 def one_zet_result(q, n):
     os.system('./zettair-query.py --index-prefix %s --n-best %d --query "%s" > zettair-query-output.tmp'
               % (path.join(models_dir, 'setting-masked.zettair-index'), n, q))
@@ -112,6 +113,15 @@ def one_zet_result(q, n):
 
     os.system('rm -f zettair-query-output.tmp')
     return res
+
+def filter_unknowns(l, t):
+  if args.negatives=='implicit':
+    return l
+  r = []
+  for i in l:
+    if t in doc_topics_positive[i] or t in doc_topics_negative[i]:
+      r.append(i)
+  return r
 
 def fusion(r):
   a = set()
@@ -147,6 +157,8 @@ for query_lang in langs_test:
   avg = [0] * 8
   ll = query_lang.split('+')
   
+  trec_res = open('trec-'+query_lang+'.top', 'w')
+
   for topic_id in topic_descriptions:
     qres = []
     for l in ll:
@@ -155,6 +167,8 @@ for query_lang in langs_test:
       else:
         topic_desc = topic_descriptions[topic_id][l]
         qr = one_zet_result(topic_desc, n_zet_results)
+
+      qr = filter_unknowns(qr, topic_id)
       qres.append((l, qr))
 
     if len(qres)==1:
@@ -162,8 +176,13 @@ for query_lang in langs_test:
     else:
       query_results = fusion(qres)
       
-    #print(topic_id, query_lang, len(query_results))
+    # print(topic_id, query_lang, len(query_results), query_results[:5])
 
+    ii = 1
+    for i in query_results:
+      print(topic_id, 'iter', i, 'rank', 1.0/ii, query_lang, file=trec_res)
+      ii += 1
+      
     if args.negatives=='implicit':
       query_matches = [topic_id in doc_topics_positive[doc_id] for doc_id in query_results]
     else: # 'explicit'
@@ -189,11 +208,12 @@ for query_lang in langs_test:
                      if len(relevant_docs[topic_id]) > 0 else float(0)
     
       #    print('%d (%s)\n\tp@5: %.1f | p@10: %.1f | p@20: %.1f | p@50: %.1f\n\tr@5: %.1f | r@10: %.1f | r@20: %.1f | r@50: %.1f' % (topic_id, query_lang, precision_at[5], precision_at[10], precision_at[20], precision_at[50], recall_at[5], recall_at[10], recall_at[20], recall_at[50]))
-      if False:
-        print('%d\t(%s)\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f'
-          % (topic_id, query_lang,
-             precision_at[5], precision_at[10], precision_at[20], precision_at[50],
-             recall_at[5], recall_at[10], recall_at[20], recall_at[50]))
+
+    if args.verbose:
+      print('%d\t(%s)\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f'
+            % (topic_id, query_lang,
+               precision_at[5], precision_at[10], precision_at[20], precision_at[50],
+               recall_at[5], recall_at[10], recall_at[20], recall_at[50]))
 
     avg[0] +=  precision_at[5]
     avg[1] +=  precision_at[10]
