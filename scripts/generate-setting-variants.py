@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from json2trec import JSON2TREC
 from os import path
 from paths import Paths
 
@@ -8,6 +9,15 @@ import json
 paths = Paths()
 
 data_dir = paths.get('DATA-DIR')
+
+json2trec = JSON2TREC()
+
+## Converts a JSON-formatted metadata collection to the TREC format for indexing.
+##
+def convert_json_to_trec(json_path):
+  trec_path = path.splitext(json_path)[0] + '.trec'
+  json2trec.convert(json_path, trec_path)
+
 
 ## Reduces each item with multilingual metadata to keep metadata in one language
 ## only, prioritizing languages to keep the distribution as uniform as possible.
@@ -129,15 +139,25 @@ io_paths = [
 setting = {}
 
 for io_dict in io_paths:
-  original_path = io_dict['original']
-  masked_path = io_dict['masked']
+  # Process the original metadata collection
   
+  original_path = io_dict['original']
+  convert_json_to_trec(original_path)
+  
+  # Process the masked metadata setting
+  
+  masked_path = io_dict['masked']
   mask_setting(original_path, masked_path)
+  convert_json_to_trec(masked_path)
+  
+  # Process metadata settings containing auto-captions
   
   original_autocaps_path = io_dict['original-autocaps']
-  masked_autocaps_path = io_dict['masked-autocaps']
-  
   autocap_setting(original_path, original_autocaps_path)
+  convert_json_to_trec(original_autocaps_path)
+  
+  masked_autocaps_path = io_dict['masked-autocaps']
   autocap_setting(masked_path, masked_autocaps_path)
+  convert_json_to_trec(masked_autocaps_path)
 
 print('All done!')
