@@ -54,25 +54,90 @@ def mask_setting(input_path, output_path):
 
   print('...final metadata tally:\n\t%s' % '\n\t'.join(['\'%s\': %d' % (stratum, metadata_tally[stratum]) for stratum in metadata_tally]))
 
+## Adds automatically generated image captions as additional metadata
+## for each item in the language(s) that it already has metadata for.
+##
+def autocap_setting(input_path, output_path):
+  print('Generating `%s`...' % path.basename(output_path))
+
+  print('...caching automatically-generated captions...')
+  
+  autocaps = {}
+  
+  autocaps_path = path.join(data_dir, 'en-autocaps.tsv')
+  
+  with open(autocaps_path, mode='r', encoding='utf-8') as autocaps_file:
+    for autocaps_line in autocaps_file:
+      image_id, autocap_en, autocap_de, autocap_fr = autocaps_line.split('\t')
+      
+      autocaps[image_id] = {'de': autocap_de,
+                            'en': autocap_en,
+                            'fr': autocap_fr}
+  
+  print('...parsing input metadata...')
+
+  with open(input_path, mode='r', encoding='utf-8') as input_file:
+    setting = json.load(input_file)
+
+  print('...adding automatically-generated captions to existing metadata...')
+  
+  added_autocaps_tally = {
+    'de': 0,
+    'en': 0,
+    'fr': 0
+  }
+  
+  for image_id in sorted(list(setting.keys()), key=lambda k: int(k)):
+    image_data = setting[image_id]
+    
+    if 'metadata-de' in image_data and image_data['metadata-de']:
+      image_data['metadata-de']['auto-caption'] = autocaps[image_id]['de']
+      added_autocaps_tally['de'] += 1
+    
+    if 'metadata-en' in image_data and image_data['metadata-en']:
+      image_data['metadata-en']['auto-caption'] = autocaps[image_id]['en']
+      added_autocaps_tally['en'] += 1
+    
+    if 'metadata-fr' in image_data and image_data['metadata-fr']:
+      image_data['metadata-fr']['auto-caption'] = autocaps[image_id]['fr']
+      added_autocaps_tally['fr'] += 1
+  
+  print('...generating output file...')
+
+  with open(output_path, mode='w', encoding='utf-8') as output_file:
+    json.dump(setting, output_file, indent='\t', sort_keys=True, ensure_ascii=False)
+
+  print('...auto-captions added as metadata:\n\t%s' % '\n\t'.join(['\'%s\': %d' % (lang, added_autocaps_tally[lang]) for lang in added_autocaps_tally]))
+
 ## Configure paths and generate all other settings as variants of the original setting
 
 io_paths = [
   {
     'original': path.join(data_dir, 'setting-original.json'),
-    'masked': path.join(data_dir, 'setting-masked.json')
+    'original-autocaps': path.join(data_dir, 'setting-original.autocaps.json'),
+    'masked': path.join(data_dir, 'setting-masked.json'),
+    'masked-autocaps': path.join(data_dir, 'setting-masked.autocaps.json')
   },
   {
     'original': path.join(data_dir, 'setting-original-only-qrels.json'),
-    'masked': path.join(data_dir, 'setting-masked-only-qrels.json')
+    'original-autocaps': path.join(data_dir, 'setting-original-only-qrels.autocaps.json'),
+    'masked': path.join(data_dir, 'setting-masked-only-qrels.json'),
+    'masked-autocaps': path.join(data_dir, 'setting-masked-only-qrels.autocaps.json')
   }
 ]
 
 setting = {}
 
-for io_pair in io_paths:
-  original_path = io_pair['original']
-  masked_path = io_pair['masked']
+for io_dict in io_paths:
+  original_path = io_dict['original']
+  masked_path = io_dict['masked']
   
   mask_setting(original_path, masked_path)
+  
+  original_autocaps_path = io_dict['original-autocaps']
+  masked_autocaps_path = io_dict['masked-autocaps']
+  
+  autocap_setting(original_path, original_autocaps_path)
+  autocap_setting(masked_path, masked_autocaps_path)
 
 print('All done!')

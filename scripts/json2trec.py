@@ -11,9 +11,13 @@ data_dir = paths.get('DATA-DIR')
 
 json_paths = [
   path.join(data_dir, 'setting-original.json'),
+  path.join(data_dir, 'setting-original.autocaps.json'),
   path.join(data_dir, 'setting-original-only-qrels.json'),
+  path.join(data_dir, 'setting-original-only-qrels.autocaps.json'),
   path.join(data_dir, 'setting-masked.json'),
-  path.join(data_dir, 'setting-masked-only-qrels.json')
+  path.join(data_dir, 'setting-masked.autocaps.json'),
+  path.join(data_dir, 'setting-masked-only-qrels.json'),
+  path.join(data_dir, 'setting-masked-only-qrels.autocaps.json')
 ]
 
 for json_path in json_paths:
@@ -35,7 +39,7 @@ for json_path in json_paths:
       for stratum in image_data:
         if stratum.startswith('metadata'):
           for metadata_key in image_data[stratum]:
-            if metadata_key.startswith('image-'):
+            if metadata_key.startswith('image-') or metadata_key.startswith('auto-'):
               metadata_value = image_data[stratum][metadata_key]
               trec_file.write('    %s\n' % html.unescape(metadata_value))
             elif metadata_key.startswith('topic-'):
