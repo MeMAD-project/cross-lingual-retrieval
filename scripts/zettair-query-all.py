@@ -5,10 +5,37 @@ from os import path
 from paths import Paths
 from copy import copy
 
-import json, os, re
+import json, os, re, argparse
 import numpy as np
 
-n_zet_results = 100
+langs = ['en', 'de', 'fr', 'vi']
+langs_test_all = copy(langs)
+for i in range(len(langs)):
+  for j in range(i+1, len(langs)):
+    langs_test_all.append(langs[i]+'+'+langs[j])
+for i in range(len(langs)):
+  for j in range(i+1, len(langs)):
+    for k in range(j+1, len(langs)):
+      langs_test_all.append(langs[i]+'+'+langs[j]+'+'+langs[k])
+langs_test_all.append('en+de+fr+vi')
+langs_test_all=','.join(langs_test_all)
+      
+parser = argparse.ArgumentParser(description='ZET query and combination with visual retrieval.')
+parser.add_argument('--languages', type=str, default=langs_test_all,
+                    help='comma-separated list of languages and their plus-separated combinations, '+
+                    ' default=%(default)s')
+parser.add_argument('--results', type=int, default=50,
+                    help='number of textual retrieval results requested from zet, default=%(default)s')
+parser.add_argument('--negatives', type=str, default='implicit',
+                    choices=['implicit', 'explicit'],
+                    help='either "implicit" or "explicit", default=%(default)s')
+parser.add_argument('--verbose', action='store_true',
+                    help='show also topic-wise results')
+args = parser.parse_args()
+
+langs_test = args.languages.split(',')
+
+n_zet_results = args.results
 
 paths = Paths()
 
@@ -37,14 +64,17 @@ data_dir = paths.get('DATA-DIR')
 
 setting_original_path = path.join(data_dir, 'setting-original.json')
 
-doc_topics = {}
+doc_topics_positive = {}
+doc_topics_negative = {}
 relevant_docs = {}
 
+#print(setting_original_path)
 with open(setting_original_path, mode='r', encoding='utf-8') as setting_original_file:
   setting_original = json.load(setting_original_file)
   
   for doc_id in setting_original:
-    doc_topics[doc_id.strip()] = setting_original[doc_id]['relevant-topics']
+    doc_topics_positive[doc_id.strip()] = setting_original[doc_id]['relevant-topics']
+    doc_topics_negative[doc_id.strip()] = setting_original[doc_id]['non-relevant-topics']
     
     for topic_id in setting_original[doc_id]['relevant-topics']:
       if topic_id not in relevant_docs:
@@ -69,7 +99,6 @@ with open(best_visual_path) as visual:
       vis[q] = []
     vis[q].append(i)
 
-
 def one_zet_result(q, n):
     os.system('./zettair-query.py --index-prefix %s --n-best %d --query "%s" > zettair-query-output.tmp'
               % (path.join(models_dir, 'setting-masked.zettair-index'), n, q))
@@ -84,6 +113,15 @@ def one_zet_result(q, n):
 
     os.system('rm -f zettair-query-output.tmp')
     return res
+
+def filter_unknowns(l, t):
+  if args.negatives=='implicit':
+    return l
+  r = []
+  for i in l:
+    if t in doc_topics_positive[i] or t in doc_topics_negative[i]:
+      r.append(i)
+  return r
 
 def fusion(r):
   a = set()
@@ -115,22 +153,12 @@ models_dir = paths.get('MODELS-DIR')
 
 avg_res = []
 
-langs = ['en', 'de', 'fr', 'vi']
-langs_test = copy(langs)
-for i in range(len(langs)):
-  for j in range(i+1, len(langs)):
-    langs_test.append(langs[i]+'+'+langs[j])
-for i in range(len(langs)):
-  for j in range(i+1, len(langs)):
-    for k in range(j+1, len(langs)):
-      langs_test.append(langs[i]+'+'+langs[j]+'+'+langs[k])
-langs_test.append('en+de+fr+vi')
-# langs_test = ['en', 'vi']
-      
 for query_lang in langs_test:
   avg = [0] * 8
   ll = query_lang.split('+')
   
+  trec_res = open('trec-'+query_lang+'.top', 'w')
+
   for topic_id in topic_descriptions:
     qres = []
     for l in ll:
@@ -139,6 +167,8 @@ for query_lang in langs_test:
       else:
         topic_desc = topic_descriptions[topic_id][l]
         qr = one_zet_result(topic_desc, n_zet_results)
+
+      qr = filter_unknowns(qr, topic_id)
       qres.append((l, qr))
 
     if len(qres)==1:
@@ -146,9 +176,23 @@ for query_lang in langs_test:
     else:
       query_results = fusion(qres)
       
-    #print(topic_id, query_lang, len(query_results))
-    
-    query_matches = [topic_id in doc_topics[doc_id] for doc_id in query_results]
+    # print(topic_id, query_lang, len(query_results), query_results[:5])
+
+    ii = 1
+    for i in query_results:
+      print(topic_id, 'iter', i, 'rank', 1.0/ii, query_lang, file=trec_res)
+      ii += 1
+      
+    if args.negatives=='implicit':
+      query_matches = [topic_id in doc_topics_positive[doc_id] for doc_id in query_results]
+    else: # 'explicit'
+      query_matches = []
+      for doc_id in query_results:
+        if topic_id in doc_topics_positive[doc_id]:
+          query_matches.append(True)
+        elif topic_id in doc_topics_negative[doc_id]:
+          query_matches.append(False)
+
     # print(len(query_matches), query_matches)
     
     precision_at = {}
@@ -164,11 +208,12 @@ for query_lang in langs_test:
                      if len(relevant_docs[topic_id]) > 0 else float(0)
     
       #    print('%d (%s)\n\tp@5: %.1f | p@10: %.1f | p@20: %.1f | p@50: %.1f\n\tr@5: %.1f | r@10: %.1f | r@20: %.1f | r@50: %.1f' % (topic_id, query_lang, precision_at[5], precision_at[10], precision_at[20], precision_at[50], recall_at[5], recall_at[10], recall_at[20], recall_at[50]))
-      if False:
-        print('%d\t(%s)\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f'
-          % (topic_id, query_lang,
-             precision_at[5], precision_at[10], precision_at[20], precision_at[50],
-             recall_at[5], recall_at[10], recall_at[20], recall_at[50]))
+
+    if args.verbose:
+      print('%d\t(%s)\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f'
+            % (topic_id, query_lang,
+               precision_at[5], precision_at[10], precision_at[20], precision_at[50],
+               recall_at[5], recall_at[10], recall_at[20], recall_at[50]))
 
     avg[0] +=  precision_at[5]
     avg[1] +=  precision_at[10]
