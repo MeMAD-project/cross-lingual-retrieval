@@ -8,6 +8,17 @@ from copy import copy
 import json, os, re, argparse
 import numpy as np
 
+text_search_indices = [
+  'setting-original.zettair-index',
+  'setting-original.autocaps.zettair-index',
+  'setting-original.translations.zettair-index',
+  'setting-original.fully-enriched.zettair-index',
+  'setting-masked.zettair-index',
+  'setting-masked.autocaps.zettair-index',
+  'setting-masked.translations.zettair-index',
+  'setting-masked.fully-enriched.zettair-index'
+]
+
 langs = ['en', 'de', 'fr', 'vi']
 langs_test_all = copy(langs)
 for i in range(len(langs)):
@@ -31,6 +42,8 @@ parser.add_argument('--negatives', type=str, default='implicit',
                     help='either "implicit" or "explicit", default=%(default)s')
 parser.add_argument('--verbose', action='store_true',
                     help='show also topic-wise results')
+parser.add_argument('--search-index', type=str, default='setting-masked.zettair-index',
+                    help='the prefix of the search index (under `../models\') to use when retrieving results from text queries, default=%(default)s')
 args = parser.parse_args()
 
 langs_test = args.languages.split(',')
@@ -101,7 +114,7 @@ with open(best_visual_path) as visual:
 
 def one_zet_result(q, n):
     os.system('./zettair-query.py --index-prefix %s --n-best %d --query "%s" > zettair-query-output.tmp'
-              % (path.join(models_dir, 'setting-masked.zettair-index'), n, q))
+              % (path.join(models_dir, args.search_index), n, q))
 
     res = []
 
@@ -157,7 +170,7 @@ for query_lang in langs_test:
   avg = [0] * 8
   ll = query_lang.split('+')
   
-  trec_res = open('trec-'+query_lang+'.top', 'w')
+  trec_res = open('trec.' + args.search_index + '.'+query_lang+'.top', 'w')
 
   for topic_id in topic_descriptions:
     qres = []
