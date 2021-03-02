@@ -27,7 +27,7 @@ Various views and enrichments of the original metadata have been used to generat
 
 * `setting-original`: The metadata from the original dataset, without any changes.
 * `setting-masked`: Images with multilingual metadata were only allowed to keep one language.
-* `*-only-qrels`: Excludes images for which the original data did not have any relevance annotations.
+* `*-only-qrels`: Excludes images for which the original data did not have any explicit relevance annotations.
 * `*.autocaps`: Adds automatically-generated captions for each image, for each language for which it had metadata.
 * `*.translations`: Adds translations in the two other languages for each metadata stratum of each image.
 * `*.fully-enriched`: Adds both automatically-generated captions and metadata translations.
