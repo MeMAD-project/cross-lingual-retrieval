@@ -1,6 +1,6 @@
-# MeMAD cross-lingual content retrieval experiments
+# MeMAD cross-lingual content retrieval
 
-This repository is a **work in progress**, but will eventually contain the combined scripts and models related to MeMAD automatic cross-lingual content retrieval experiments.
+This repository contains the combined scripts and models related to the MeMAD automatic cross-lingual content retrieval experiments.
 
 ## Dependencies
 
@@ -20,6 +20,10 @@ The scripts responsible for building the experimental settings require modules f
 All sets of metadata that have been indexed and used in the MeMAD search performance experiments have been released via the [MeMAD data for automatic cross-lingual retrieval experiments](https://zenodo.org/record/4570072) collection on Zenodo, under the same CC-BY-SA 3.0 license as the original dataset. These deposits can be freely downloaded and extracted in the `data` folder in order to replicate the search indices distributed through this repository (`zettair-index-all.py`).
 
 Alternatively, the whole data may be reproduced using only the original dataset, by downloading and staging the data as instructed, and running the `collate-metadata.py` and `generate-setting-variants.py` scripts in order. The first script should compile `setting-original.json`, and the other one should generate all the other settings.
+
+## Experimental results
+
+Our experimental findings from using the data augmentation and content retrieval techniques collected in this repository have been described in the public MeMAD deliverable [D4.4 Report on Cross-Lingual Content Retrieval Based on Automatic Translation](https://zenodo.org/record/4639513). Once all the data and software dependencies are in place, the results can be easily reproduced by executing the `zettair-query-all.py` script with default settings, under the `scripts` directory. Alternatively, a per-topic detailed evaluation can be requested through the `--verbose` option when running the script.
 
 ## Metadata setting URI format
 
