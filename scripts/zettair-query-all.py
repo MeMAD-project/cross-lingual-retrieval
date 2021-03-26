@@ -95,8 +95,7 @@ with open(setting_original_path, mode='r', encoding='utf-8') as setting_original
       
       relevant_docs[topic_id].append(doc_id)
 
-visuals_dir = paths.get('VISUALS-DIR')
-best_visual_path = path.join(visuals_dir, 'best-visual-1000.csv')
+best_visual_path = path.join(data_dir, 'best-visual-1000.csv')
 
 vis = {}
 with open(best_visual_path) as visual:
